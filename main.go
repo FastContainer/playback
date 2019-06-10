@@ -3,111 +3,71 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os/exec"
-	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/carlescere/scheduler"
 )
+
+type BulkMail struct {
+	from         string
+	to           string
+	subject      string
+	sessionCount int
+	messageCount int
+	interval     int
+}
+
+var cmder Cmder = Cmd{}
 
 func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	var normal Experiment
-	var tarpit Experiment
-
 	if len(args) > 0 && args[0] == "dryrun" {
-		normal = &MailMock{from: "root@smtp-client", to: "root@smtp-rcpt", host: "containers:58026"}
-		tarpit = &MailMock{from: "root@smtp-client", to: "ca@smtp-tarpit", host: "containers:58025"}
-	} else {
-		normal = &Mail{from: "root@smtp-client", to: "root@smtp-rcpt", host: "containers:58026"}
-		tarpit = &Mail{from: "root@smtp-client", to: "ca@smtp-tarpit", host: "containers:58025"}
+		cmder = MockCmd{Out: ""}
 	}
 
-	job1 := func() {
-		b1, _ := normal.sendToNormal(1, 1)
-		fmt.Printf("%s\n", b1)
-	}
-	job2 := func() {
-		b2, _ := tarpit.sendToTarpit(1, 1)
-		fmt.Printf("%s\n", b2)
-	}
+	totalTime := 10 * time.Second
+	case1 := &BulkMail{from: "root@example-a.local", to: "root@smtp-rcpt", subject: "aaa", sessionCount: 10, messageCount: 100, interval: 2}
+	case2 := &BulkMail{from: "root@example-b.local", to: "root@smtp-rcpt", subject: "bbb", sessionCount: 1, messageCount: 1, interval: 3}
+	case3 := &BulkMail{from: "root@example-c.local", to: "ca@smtp-tarpit", subject: "ccc", sessionCount: 1, messageCount: 1, interval: 5}
+	case4 := &BulkMail{from: "root@example-d.local", to: "root@smtp-rcpt", subject: "ddd", sessionCount: 100, messageCount: 1000, interval: 5}
 
-	scheduler.Every(3).Seconds().Run(job1)
-	scheduler.Every(2).Seconds().Run(job2)
+	// Playback 1: Containers
+	job1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send("containers:58025") })
+	job2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send("containers:58026") })
+	job3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send("containers:58027") })
+	job4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send("containers:58028") })
 
-	runtime.Goexit()
+	// Playback 2: Monolithic
+	monolithic := "monolithic:58025"
+	job5, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(monolithic) })
+	job6, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(monolithic) })
+	job7, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(monolithic) })
+	job8, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(monolithic) })
+
+	time.Sleep(totalTime)
+	job1.Quit <- true
+	job2.Quit <- true
+	job3.Quit <- true
+	job4.Quit <- true
+	job5.Quit <- true
+	job6.Quit <- true
+	job7.Quit <- true
+	job8.Quit <- true
+	fmt.Printf("job finish!\n")
 }
 
-type Experiment interface {
-	sendToNormal(int, int) ([]byte, error)
-	sendToTarpit(int, int) ([]byte, error)
-}
-
-type Mail struct {
-	from string
-	to   string
-	host string
-}
-
-func (m *Mail) sendToNormal(sessionCount int, messageCount int) ([]byte, error) {
+func (m *BulkMail) send(by string) ([]byte, error) {
 	args := []string{
-		"-s", strconv.Itoa(sessionCount),
-		"-m", strconv.Itoa(messageCount),
 		"-c",
-		"-S", "test mail by cluster account",
+		"-S", m.subject,
 		"-f", m.from,
 		"-t", m.to,
-		m.host,
+		"-s", strconv.Itoa(m.sessionCount),
+		"-m", strconv.Itoa(m.messageCount),
+		by,
 	}
-	return exec.Command("smtp-source", args...).Output()
-}
-
-func (m *Mail) sendToTarpit(sessionCount int, messageCount int) ([]byte, error) {
-	args := []string{
-		"-s", strconv.Itoa(sessionCount),
-		"-m", strconv.Itoa(messageCount),
-		"-c",
-		"-N",
-		"-S", "cluster account",
-		"-f", m.from,
-		"-t", m.to,
-		m.host,
-	}
-	return exec.Command("smtp-source", args...).Output()
-}
-
-type MailMock struct {
-	from string
-	to   string
-	host string
-}
-
-func (m *MailMock) sendToNormal(sessionCount int, messageCount int) ([]byte, error) {
-	args := []string{
-		"-s", strconv.Itoa(sessionCount),
-		"-m", strconv.Itoa(messageCount),
-		"-c",
-		"-N",
-		"-S", "cluster account",
-		"-f", m.from,
-		"-t", m.to,
-		m.host,
-	}
-	return []byte(fmt.Sprintln(args)), nil
-}
-
-func (m *MailMock) sendToTarpit(sessionCount int, messageCount int) ([]byte, error) {
-	args := []string{
-		"-s", strconv.Itoa(sessionCount),
-		"-m", strconv.Itoa(messageCount),
-		"-c",
-		"-N",
-		"-S", "cluster account",
-		"-f", m.from,
-		"-t", m.to,
-		m.host,
-	}
-	return []byte(fmt.Sprintln(args)), nil
+	return cmder.Do("smtp-source", args...)
 }
