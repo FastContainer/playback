@@ -43,7 +43,7 @@ func main() {
 	job4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send("mail4.test:58028") })
 
 	// Playback 2: Monolithic
-	monolithic := "monolithic:58025"
+	monolithic := "monolithic:25"
 	job5, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(monolithic) })
 	job6, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(monolithic) })
 	job7, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(monolithic) })
