@@ -11,7 +11,6 @@ import (
 
 type BulkMail struct {
 	number       int
-	from         string
 	to           string
 	subject      string
 	sessionCount int
@@ -76,7 +75,7 @@ func (m *BulkMail) send(by string) ([]byte, error) {
 	args := []string{
 		"-c",
 		"-S", m.subject,
-		"-f", m.from,
+		"-f", by,
 		"-t", m.to,
 		"-s", strconv.Itoa(m.sessionCount),
 		"-m", strconv.Itoa(m.messageCount),
