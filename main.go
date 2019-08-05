@@ -10,6 +10,7 @@ import (
 )
 
 type BulkMail struct {
+	number       int
 	from         string
 	to           string
 	subject      string
@@ -21,43 +22,53 @@ type BulkMail struct {
 var cmder Cmder = Cmd{}
 
 const subject = "fast container"
+const diminutive = "dimi-%d.test:%d"
+const monolithic = "mono-%d.test:%d"
 
 func main() {
 	flag.Parse()
 	args := flag.Args()
+	totalTime := 10 * time.Second
 
-	if len(args) > 0 && args[0] == "dryrun" {
-		cmder = MockCmd{Out: ""}
+	if len(args) > 0 {
+		if args[0] == "dryrun" {
+			cmder = MockCmd{Out: ""}
+		}
+
+		if i, err := strconv.Atoi(args[0]); err == nil {
+			totalTime = time.Duration(i) * time.Minute
+		}
 	}
 
-	totalTime := 10 * time.Second
-	case1 := &BulkMail{from: "root@mail1.test", to: "root@smtp-rcpt", subject: subject, sessionCount: 10, messageCount: 100, interval: 2}
-	case2 := &BulkMail{from: "root@mail2.test", to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 1, interval: 3}
-	case3 := &BulkMail{from: "root@mail3.test", to: "root@smtp-tarpit", subject: subject, sessionCount: 1, messageCount: 1, interval: 5}
-	case4 := &BulkMail{from: "root@mail4.test", to: "root@smtp-rcpt", subject: subject, sessionCount: 100, messageCount: 1000, interval: 5}
+	case1 := &BulkMail{number: 1, to: "root@smtp-rcpt", subject: subject, sessionCount: 10, messageCount: 100, interval: 2}
+	case2 := &BulkMail{number: 2, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 1, interval: 3}
+	case3 := &BulkMail{number: 3, to: "root@smtp-tarpit", subject: subject, sessionCount: 1, messageCount: 1, interval: 5}
+	case4 := &BulkMail{number: 4, to: "root@smtp-rcpt", subject: subject, sessionCount: 100, messageCount: 1000, interval: 5}
 
 	// Playback 1: Containers
-	job1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send("mail1.test:58025") })
-	job2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send("mail2.test:58026") })
-	job3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send("mail3.test:58027") })
-	job4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send("mail4.test:58028") })
+	dimi1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(fmt.Sprintf(diminutive, 1, 58025)) })
+	dimi2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(fmt.Sprintf(diminutive, 2, 58026)) })
+	dimi3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(fmt.Sprintf(diminutive, 3, 58027)) })
+	dimi4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(fmt.Sprintf(diminutive, 4, 58028)) })
 
 	// Playback 2: Monolithic
-	monolithic := "monolithic:25"
-	job5, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(monolithic) })
-	job6, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(monolithic) })
-	job7, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(monolithic) })
-	job8, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(monolithic) })
+	mono1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(fmt.Sprintf(monolithic, 1, 25)) })
+	mono2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(fmt.Sprintf(monolithic, 2, 25)) })
+	mono3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(fmt.Sprintf(monolithic, 3, 25)) })
+	mono4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(fmt.Sprintf(monolithic, 4, 25)) })
 
 	time.Sleep(totalTime)
-	job1.Quit <- true
-	job2.Quit <- true
-	job3.Quit <- true
-	job4.Quit <- true
-	job5.Quit <- true
-	job6.Quit <- true
-	job7.Quit <- true
-	job8.Quit <- true
+
+	dimi1.Quit <- true
+	dimi2.Quit <- true
+	dimi3.Quit <- true
+	dimi4.Quit <- true
+
+	mono1.Quit <- true
+	mono2.Quit <- true
+	mono3.Quit <- true
+	mono4.Quit <- true
+
 	fmt.Printf("job finish!\n")
 }
 
