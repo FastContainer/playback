@@ -39,10 +39,10 @@ func main() {
 		}
 	}
 
-	case1 := &BulkMail{number: 1, to: "root@smtp-rcpt", subject: subject, sessionCount: 10, messageCount: 100, interval: 2}
+	case1 := &BulkMail{number: 1, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 10, interval: 2}
 	case2 := &BulkMail{number: 2, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 1, interval: 3}
 	case3 := &BulkMail{number: 3, to: "root@smtp-tarpit", subject: subject, sessionCount: 1, messageCount: 1, interval: 5}
-	case4 := &BulkMail{number: 4, to: "root@smtp-rcpt", subject: subject, sessionCount: 100, messageCount: 1000, interval: 5}
+	case4 := &BulkMail{number: 4, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 100, interval: 5}
 
 	// Playback 1: Containers
 	dimi1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(fmt.Sprintf(diminutive, 1, 58025)) })
