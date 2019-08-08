@@ -30,7 +30,7 @@ func main() {
 	totalTime := 10 * time.Second
 
 	if len(args) > 0 {
-		if args[0] == "dryrun" {
+		if len(args) > 1 && args[1] == "dryrun" {
 			cmder = MockCmd{Out: ""}
 		}
 
@@ -39,20 +39,20 @@ func main() {
 		}
 	}
 
-	case1 := &BulkMail{number: 1, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 100, interval: 1}
-	case2 := &BulkMail{number: 2, to: "root@smtp-tarpit", subject: subject, sessionCount: 1, messageCount: 100, interval: 3}
+	case1 := &BulkMail{number: 1, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 10, interval: 10}
+	case2 := &BulkMail{number: 2, to: "root@smtp-tarpit", subject: subject, sessionCount: 1, messageCount: 10, interval: 30}
 	//case2 := &BulkMail{number: 2, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 1, interval: 3}
 	//case4 := &BulkMail{number: 4, to: "root@smtp-rcpt", subject: subject, sessionCount: 1, messageCount: 100, interval: 5}
 
 	// Playback 1: Containers
-	dimi1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(fmt.Sprintf(diminutive, 1, 58025)) })
-	dimi2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(fmt.Sprintf(diminutive, 2, 58026)) })
+	dimi1, _ := scheduler.Every(case1.interval).Seconds().NotImmediately().Run(func() { case1.send(fmt.Sprintf(diminutive, 1, 58025)) })
+	dimi2, _ := scheduler.Every(case2.interval).Seconds().NotImmediately().Run(func() { case2.send(fmt.Sprintf(diminutive, 2, 58026)) })
 	//dimi3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(fmt.Sprintf(diminutive, 3, 58027)) })
 	//dimi4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(fmt.Sprintf(diminutive, 4, 58028)) })
 
 	// Playback 2: Monolithic
-	mono1, _ := scheduler.Every(case1.interval).Seconds().Run(func() { case1.send(fmt.Sprintf(monolithic, 1, 25)) })
-	mono2, _ := scheduler.Every(case2.interval).Seconds().Run(func() { case2.send(fmt.Sprintf(monolithic, 2, 25)) })
+	mono1, _ := scheduler.Every(case1.interval).Seconds().NotImmediately().Run(func() { case1.send(fmt.Sprintf(monolithic, 1, 25)) })
+	mono2, _ := scheduler.Every(case2.interval).Seconds().NotImmediately().Run(func() { case2.send(fmt.Sprintf(monolithic, 2, 25)) })
 	//mono3, _ := scheduler.Every(case3.interval).Seconds().Run(func() { case3.send(fmt.Sprintf(monolithic, 3, 25)) })
 	//mono4, _ := scheduler.Every(case4.interval).Seconds().Run(func() { case4.send(fmt.Sprintf(monolithic, 4, 25)) })
 
