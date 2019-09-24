@@ -27,15 +27,22 @@ const monolithic = "mono-%d.test:%d"
 func main() {
 	flag.Parse()
 	args := flag.Args()
-	totalTime := 10 * time.Second
+	delay := 5 * time.Minute
+	totalTime := 10 * time.Minute
 
 	if len(args) > 0 {
-		if len(args) > 1 && args[1] == "dryrun" {
+		if args[0] == "dryrun" {
+			fmt.Printf("dryrun -- delay: %#vmin, total: %#vmin\n", delay.Minutes(), totalTime.Minutes())
 			cmder = MockCmd{Out: ""}
-		}
-
-		if i, err := strconv.Atoi(args[0]); err == nil {
-			totalTime = time.Duration(i) * time.Minute
+		} else {
+			if i, err := strconv.Atoi(args[0]); err == nil {
+				totalTime = time.Duration(i) * time.Minute
+			}
+			if len(args) > 1 {
+				if i, err := strconv.Atoi(args[1]); err == nil {
+					delay = time.Duration(i) * time.Minute
+				}
+			}
 		}
 	}
 
@@ -44,12 +51,17 @@ func main() {
 
 	// Playback 1: Containers
 	dimi1, _ := scheduler.Every(case1.interval).Seconds().NotImmediately().Run(func() { case1.send(fmt.Sprintf(diminutive, 1, 58025)) })
-	dimi2, _ := scheduler.Every(case2.interval).Seconds().NotImmediately().Run(func() { case2.send(fmt.Sprintf(diminutive, 2, 58026)) })
 	// Playback 2: Monolithic
 	mono1, _ := scheduler.Every(case1.interval).Seconds().NotImmediately().Run(func() { case1.send(fmt.Sprintf(monolithic, 1, 25)) })
+
+	time.Sleep(delay)
+
+	// Playback 1: Containers
+	dimi2, _ := scheduler.Every(case2.interval).Seconds().NotImmediately().Run(func() { case2.send(fmt.Sprintf(diminutive, 2, 58026)) })
+	// Playback 2: Monolithic
 	mono2, _ := scheduler.Every(case2.interval).Seconds().NotImmediately().Run(func() { case2.send(fmt.Sprintf(monolithic, 2, 25)) })
 
-	time.Sleep(totalTime)
+	time.Sleep(totalTime - delay)
 
 	dimi1.Quit <- true
 	dimi2.Quit <- true
