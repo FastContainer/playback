@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/smtp"
 	"strconv"
 	"time"
 
@@ -25,6 +26,57 @@ const diminutive = "dimi-%d.test:%d"
 const monolithic = "mono-%d.test:%d"
 
 func main() {
+}
+
+func resource() {
+	from := fmt.Sprintf("root@mono-%d.test", 1)
+	to := []string{"recipient@example.net"}
+	msg := []byte("To: recipient@example.net\r\nSubject: discount Gophers!\r\n\r\nThis is the email body.\r\n")
+	err := SendMail("monolith:25", from, to, msg)
+	if err != nil {
+		fmt.Printf("%#v\n", err)
+	}
+}
+
+func SendMail(addr string, from string, to []string, msg []byte) error {
+	c, err := smtp.Dial(addr)
+	if err != nil {
+		return err
+	}
+
+	defer c.Close()
+	if err = c.hello(); err != nil {
+		return err
+	}
+
+	if err = c.Mail(from); err != nil {
+		return err
+	}
+
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(msg)
+	if err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	return c.Quit()
+}
+
+func inline() {
 	flag.Parse()
 	args := flag.Args()
 	delay := 5 * time.Minute
