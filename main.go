@@ -24,55 +24,86 @@ var cmder Cmder = Cmd{}
 const subject = "fast container"
 const diminutive = "dimi-%d.test:%d"
 const monolithic = "mono-%d.test:%d"
+const resourceLimit = 25
 
 func main() {
+	resource()
 }
 
 func resource() {
-	from := fmt.Sprintf("root@mono-%d.test", 1)
-	to := []string{"recipient@example.net"}
-	msg := []byte("To: recipient@example.net\r\nSubject: discount Gophers!\r\n\r\nThis is the email body.\r\n")
-	err := SendMail("monolith:25", from, to, msg)
-	if err != nil {
-		fmt.Printf("%#v\n", err)
+	totalTime := 10 * time.Minute
+	count := 0
+	job, _ := scheduler.Every(15).Seconds().NotImmediately().Run(func() {
+		SendMails(count * resourceLimit)
+		count++
+	})
+	time.Sleep(totalTime)
+	job.Quit <- true
+	fmt.Printf("job finish!\n")
+}
+
+func SendMails(startNum int) {
+	stopNum := startNum + resourceLimit
+
+	for i := startNum; i < stopNum; i++ {
+		host := "monolith:25"
+		from := fmt.Sprintf("root@mono-%d.test", i)
+		to := "root@recipient"
+		msg := []byte(fmt.Sprintf("To: %s\r\nSubject: discount Gophers!\r\n\r\nThis is the email body.\r\n", to))
+		go SendMail(host, from, []string{to}, msg)
 	}
 }
 
 func SendMail(addr string, from string, to []string, msg []byte) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
 	}
 
 	defer c.Close()
-	if err = c.hello(); err != nil {
+
+	if err = c.Hello("localhost"); err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
 	}
 
 	if err = c.Mail(from); err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
 	}
 
 	for _, addr := range to {
 		if err = c.Rcpt(addr); err != nil {
+			fmt.Printf("%#v\n", err)
 			return err
 		}
 	}
 
 	w, err := c.Data()
 	if err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
 	}
 
 	_, err = w.Write(msg)
 	if err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
+	}
+
+	b := make([]int, 600)
+	for i, _ := range b {
+		w.Write([]byte(fmt.Sprintf("yo%d\r\n", i)))
+		time.Sleep(1 * time.Second)
 	}
 
 	err = w.Close()
 	if err != nil {
+		fmt.Printf("%#v\n", err)
 		return err
 	}
+
 	return c.Quit()
 }
 
