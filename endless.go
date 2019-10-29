@@ -6,44 +6,59 @@ import (
 	"io"
 	"net"
 	"net/textproto"
+	"time"
+
+	"github.com/carlescere/scheduler"
 )
 
-func main() {
-	rcptAddr := "root@recipient"
-	fromAddr := "root@sender"
+const resourceLimit = 25
 
-	c, err := Dial("recipient:25")
+type Mail struct {
+	Host string
+	From string
+	Rcpt string
+}
+
+const mailBody = "To: %s\r\n" +
+	"Subject: Hello, Gophers\r\n" +
+	"\r\n" +
+	"This is the email body.\r\n"
+
+func (m *Mail) Data() string {
+	return fmt.Sprintf(mailBody, m.Rcpt)
+}
+
+func (m *Mail) continueSendingMailBodySlowly() {
+	c, err := Dial(m.Host)
 	if err != nil {
 		fmt.Printf("Dial\n%#v\n", err)
 		return
 	}
+	defer c.conn.Close()
+
 	err = c.Helo("localhost")
 	if err != nil {
 		return
 	}
-	err = c.MailFrom(fromAddr)
+	err = c.MailFrom(m.From)
 	if err != nil {
 		return
 	}
-	err = c.RcptTo(rcptAddr)
+	err = c.RcptTo(m.Rcpt)
 	if err != nil {
 		return
 	}
+
 	err = c.Data()
 	if err != nil {
 		return
 	}
 
-	body := "To: %s\r\n" +
-		"Subject: %s\r\n" +
-		"\r\n" +
-		"This is the email body.\r\n"
-	code, msg, err := c.Cmd(250, body, rcptAddr, "Hello, Gophers")
+	code, msg, err := c.EndlessCmd(250, "%s", m.Data())
+	//code, msg, err := c.Cmd(250, "%s.", m.Data())
 	if err != nil {
-		fmt.Printf("HELO\n%d -- %s\n%#v", code, msg, err)
-		return
+		fmt.Printf("DATA\n%d -- %s\n%#v", code, msg, err)
 	}
-	return
 }
 
 type Client struct {
@@ -112,6 +127,32 @@ func (c *Client) Helo(host string) error {
 	return err
 }
 
+func (c *Client) EndlessCmd(expectCode int, format string, args ...interface{}) (int, string, error) {
+	id := c.conn.Next()
+	c.conn.StartRequest(id)
+	defer c.conn.EndRequest(id)
+
+	err := c.conn.PrintfLine(format, args...)
+	if err != nil {
+		return 0, "", err
+	}
+
+	// Endless send text
+	for {
+		time.Sleep(1 * time.Second)
+		err := c.conn.PrintfLine("%s\r\n", "loop")
+		if err != nil {
+			fmt.Printf("Looping\n%#v\n", err)
+			break
+		}
+	}
+
+	c.conn.StartResponse(id)
+	defer c.conn.EndResponse(id)
+	code, msg, err := c.conn.ReadCodeLine(expectCode)
+	return code, msg, err
+}
+
 func (c *Client) MailFrom(addr string) error {
 	code, msg, err := c.Cmd(250, "MAIL FROM: "+addr)
 	if err != nil {
@@ -134,4 +175,27 @@ func (c *Client) Data() error {
 		fmt.Printf("DATA\nID: %d -- %s\n%#v\n", code, msg, c.conn)
 	}
 	return err
+}
+
+func Endless() {
+	totalTime := 10 * time.Minute
+	count := 0
+
+	job, _ := scheduler.Every(15).Seconds().NotImmediately().Run(func() {
+		startNum := count * resourceLimit
+		stopNum := startNum + resourceLimit
+		for i := startNum; i < stopNum; i++ {
+			m := &Mail{
+				Host: "monolith:25",
+				From: fmt.Sprintf("root@mono-%d.test", i),
+				Rcpt: "root@recipient",
+			}
+			go m.continueSendingMailBodySlowly()
+		}
+		count++
+	})
+
+	time.Sleep(totalTime)
+	job.Quit <- true
+	fmt.Printf("job finish!\n")
 }
