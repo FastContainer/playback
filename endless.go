@@ -177,6 +177,10 @@ func (c *Client) Data() error {
 	return err
 }
 
+const endlessHost = "monolith:25"
+const endlessFrom = "root@mono-%d.test"
+const endlessRcpt = "root@recipient"
+
 func Endless() {
 	totalTime := 10 * time.Minute
 	count := 0
@@ -186,9 +190,9 @@ func Endless() {
 		stopNum := startNum + resourceLimit
 		for i := startNum; i < stopNum; i++ {
 			m := &Mail{
-				Host: "monolith:25",
-				From: fmt.Sprintf("root@mono-%d.test", i),
-				Rcpt: "root@recipient",
+				Host: endlessHost,
+				From: fmt.Sprintf(endlessFrom, i),
+				Rcpt: endlessRcpt,
 			}
 			go m.continueSendingMailBodySlowly()
 		}
