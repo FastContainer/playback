@@ -31,7 +31,7 @@ func (m *Mail) Data() string {
 func (m *Mail) continueSendingMailBodySlowly() {
 	c, err := Dial(m.Host)
 	if err != nil {
-		fmt.Printf("Dial\n%#v\n", err)
+		fmt.Printf("%s: %#v\n", m.From, err)
 		return
 	}
 	defer c.conn.Close()
@@ -180,6 +180,10 @@ func (c *Client) Data() error {
 const endlessHost = "monolith:25"
 const endlessFrom = "root@mono-%d.test"
 const endlessRcpt = "root@recipient"
+
+//func main() {
+//	Endless()
+//}
 
 func Endless() {
 	totalTime := 10 * time.Minute
