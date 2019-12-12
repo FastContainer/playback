@@ -193,7 +193,7 @@ func Endless() {
 		for i := startNum; i < stopNum; i++ {
 			m := &Mail{
 				//Host: endlessHost,
-				Host: fmt.Sprintf(endlessHost, 60001+count),
+				Host: fmt.Sprintf(endlessHost, 60002+count),
 				From: fmt.Sprintf(endlessFrom, i),
 				Rcpt: endlessRcpt,
 			}
