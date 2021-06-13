@@ -18,8 +18,8 @@ type BulkMail struct {
 
 var cmder Cmder = Cmd{}
 
-const container = "cont-%d.test:%d"
-const monolith = "mono-%d.test:%d"
+const container = "container-%d.test:%d"
+const monolith = "monolith-%d.test:%d"
 
 func (m *BulkMail) send(by string) ([]byte, error) {
 	args := []string{
@@ -46,14 +46,14 @@ func Bulk(dryrun bool) {
 
 	case1 := &BulkMail{
 		number:       1,
-		to:           "root@smtp-rcpt",
+		to:           "root@recipient",
 		sessionCount: 1,
 		messageCount: 10,
 		interval:     10,
 	}
 	case2 := &BulkMail{
 		number:       2,
-		to:           "root@smtp-tarpit",
+		to:           "root@mxtarpit",
 		sessionCount: 1,
 		messageCount: 10,
 		interval:     30,
