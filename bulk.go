@@ -36,6 +36,48 @@ func (m *BulkMail) send(by string) ([]byte, error) {
 }
 
 func Bulk(dryrun bool) {
+	countBasedBulk(dryrun)
+	// timeBasedBulk()
+}
+
+func countBasedBulk(dryrun bool) {
+	if dryrun {
+		fmt.Printf("dryrun\n")
+		cmder = MockCmd{Out: ""}
+	}
+
+	case1 := &BulkMail{
+		number:       1,
+		to:           "root@recipient",
+		sessionCount: 1,
+		messageCount: 10,
+		interval:     10,
+	}
+	case2 := &BulkMail{
+		number:       2,
+		to:           "root@mxtarpit",
+		sessionCount: 1,
+		messageCount: 10,
+		interval:     30,
+	}
+
+	for i := 0; i < 1200; i++ {
+		go func() {
+			case1.send(fmt.Sprintf(container, 1, 58025))
+		}()
+		if i < 600 {
+			continue
+		}
+		go func() {
+			case2.send(fmt.Sprintf(container, 2, 58026))
+		}()
+		time.Sleep(1 * time.Second)
+	}
+
+	fmt.Printf("job finish!\n")
+}
+
+func timeBasedBulk(dryrun bool) {
 	delay := 5 * time.Minute
 	totalTime := 10 * time.Minute
 
