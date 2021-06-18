@@ -19,7 +19,7 @@ type BulkMail struct {
 var cmder Cmder = Cmd{}
 
 const container = "container-%d.test:%d"
-const monolith = "monolith-%d.test:%d"
+const monolith = "mono-%d.test:%d"
 
 func (m *BulkMail) send(by string) ([]byte, error) {
 	args := []string{
