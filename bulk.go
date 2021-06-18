@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/carlescere/scheduler"
@@ -61,19 +62,24 @@ func countBasedBulk(dryrun bool) {
 		interval:     30,
 	}
 
+	var wg sync.WaitGroup
 	for i := 0; i < 1200; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			case1.send(fmt.Sprintf(container, 1, 58025))
 		}()
-		if i < 600 {
-			continue
+		if 600 <= i {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				case2.send(fmt.Sprintf(container, 2, 58026))
+			}()
 		}
-		go func() {
-			case2.send(fmt.Sprintf(container, 2, 58026))
-		}()
 		time.Sleep(1 * time.Second)
 	}
 
+	wg.Wait()
 	fmt.Printf("job finish!\n")
 }
 
