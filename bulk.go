@@ -32,7 +32,7 @@ func (m *BulkMail) send(by string) ([]byte, error) {
 		"-m", strconv.Itoa(m.messageCount),
 		by,
 	}
-	fmt.Printf("%s %s\n", time.Now().Format("15:04:05"), by)
+	fmt.Printf("%s %s\n", time.Now().Format("Jan 1 15:04:05"), by)
 	return cmder.Do("smtp-source", args...)
 }
 
